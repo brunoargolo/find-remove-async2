@@ -140,13 +140,14 @@ module.exports = testCase({
       t.done()
     },
 
-    'removing non-existing directory': function (t) {
+    'removing non-existing directory': (function (t) {
       const dir = generateRandomFilename()
       findRemove(dir).then((result) => {
         t.strictEqual(Object.keys(result).length, 0, 'returned empty')
         t.done()
-      })
-    }
+      }).catch(console.error)
+    }(console.error))
+
   }),
 
   'TC 2: tests with real files': testCase({
@@ -161,7 +162,7 @@ module.exports = testCase({
       findRemove('/tmp/blahblah/hehehe/yo/what/').then((result) => {
         t.strictEqual(Object.keys(result).length, 0, 'did nothing.')
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(no params)': function (t) {
@@ -175,7 +176,7 @@ module.exports = testCase({
         t.equal(exists1_1, true, 'findRemove(no params) did not remove directory1_1')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(all files)': function (t) {
@@ -190,7 +191,7 @@ module.exports = testCase({
         t.equal(exists1_2_1_3, false, 'removed randomFile1_2_1_3 fine')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(all directories)': function (t) {
@@ -207,7 +208,7 @@ module.exports = testCase({
         t.equal(exists1_2_1_3, false, 'removed randomFile1_2_1_3')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(everything)': function (t) {
@@ -224,7 +225,7 @@ module.exports = testCase({
         t.equal(exists1_2_1_3, false, 'dit not remove randomFile1_2_1_3 fine')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files no hit)': function (t) {
@@ -236,7 +237,7 @@ module.exports = testCase({
         t.equal(exists1_2_1_3, true, 'did not remove randomFile1_2_1_3')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(directory1_2_1)': function (t) {
@@ -248,7 +249,7 @@ module.exports = testCase({
         t.equal(exists1_1, true, 'did not remove directory1_1')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(one directory and all files)': function (t) {
@@ -268,7 +269,7 @@ module.exports = testCase({
         t.ok(result[directory1_2_1], 'directory1_2_1 is in result')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(another directory and all files)': function (t) {
@@ -282,7 +283,7 @@ module.exports = testCase({
         t.ok(result[randomFile2_1], 'randomFile2_1 is in result')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(all bak files from root)': function (t) {
@@ -340,7 +341,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(all log files from directory1_2_1)': function (t) {
@@ -367,7 +368,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(all bak or log files from root)': function (t) {
@@ -426,7 +427,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(filename randomFilename1_2_1_1 from directory1_2)': function (t) {
@@ -453,7 +454,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(two files from root)': function (t) {
@@ -487,7 +488,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files set to *.*)': function (t) {
@@ -521,7 +522,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(with mixed ext and file params)': function (t) {
@@ -563,7 +564,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(with ignore param)': function (t) {
@@ -593,7 +594,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(with ignore and jpg extension params)': function (t) {
@@ -625,7 +626,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(with multiple ignore)': function (t) {
@@ -671,7 +672,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(with ignore and bak extension params)': function (t) {
@@ -717,7 +718,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(two files and check others)': function (t) {
@@ -774,7 +775,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(limit to maxLevel = 0)': function (t) {
@@ -790,7 +791,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(limit to maxLevel = 1)': function (t) {
@@ -806,7 +807,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(limit to maxLevel = 2)': function (t) {
@@ -822,7 +823,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(limit to maxLevel = 3)': function (t) {
@@ -834,7 +835,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(limit to maxLevel = 3 + bak only)': function (t) {
@@ -846,7 +847,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(single dir)': function (t) {
@@ -858,7 +859,7 @@ module.exports = testCase({
         t.equal(exists1_2, false, 'findRemove(single dir) removed directory1_2')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(two directories)': function (t) {
@@ -873,7 +874,7 @@ module.exports = testCase({
         t.equal(exists1_3, true, 'findRemove(two dirs) did not remove directory1_3')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(directories with the same basename)': function (t) {
@@ -907,7 +908,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(test run)': function (t) {
@@ -940,7 +941,7 @@ module.exports = testCase({
         t.equal(exists1_1, true, 'findRemove(test run) did not remove directory1_1')
 
         t.done()
-      })
+      }).catch(console.error)
     }
   }),
 
@@ -966,7 +967,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files and dirs older than 10 sec)': function (t) {
@@ -982,7 +983,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files older than 2 sec with wait)': function (t) {
@@ -998,7 +999,7 @@ module.exports = testCase({
           )
 
           t.done()
-        })
+        }).catch(console.error)
       }, 2100)
     },
 
@@ -1016,7 +1017,7 @@ module.exports = testCase({
           )
 
           t.done()
-        })
+        }).catch(console.error)
       }, 2100)
     }
   }),
@@ -1044,7 +1045,7 @@ module.exports = testCase({
           )
 
           t.done()
-        })
+        }).catch(console.error)
       }, 3 * 1000)
     },
 
@@ -1054,7 +1055,7 @@ module.exports = testCase({
         t.deepEqual(result, {}, 'is an empty json')
 
         t.done()
-      })
+      }).catch(console.error)
     }
   }),
 
@@ -1076,7 +1077,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files and dirs with limit of 5)': function (t) {
@@ -1088,7 +1089,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     }
   }),
 
@@ -1110,7 +1111,7 @@ module.exports = testCase({
         )
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(files with non-existing prefix "ssssssssssssssssssssssssss" - too many chars)':
@@ -1125,7 +1126,7 @@ module.exports = testCase({
           )
 
           t.done()
-        })
+        }).catch(console.error)
       }
   }),
 
@@ -1149,7 +1150,7 @@ module.exports = testCase({
         t.equal(exists1_2_1_5, false, 'removed fixFile1_2_1_5 fine')
 
         t.done()
-      })
+      }).catch(console.error)
     },
 
     'findRemove(regex pattern directories)': function (t) {
@@ -1161,7 +1162,7 @@ module.exports = testCase({
         t.equal(exists5, false, 'removed directory5 fine')
 
         t.done()
-      })
+      }).catch(console.error)
     }
   })
 })

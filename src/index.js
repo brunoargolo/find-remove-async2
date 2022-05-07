@@ -1,6 +1,6 @@
+const Stream = require('stream')
 const fs = require('fs/promises')
 const path = require('path')
-const merge = require('fmerge')
 const rimraf = require('rimraf')
 
 let now
@@ -154,6 +154,126 @@ function isTestRun(options) {
   return options && 'test' in options ? options.test : false
 }
 
+function createObjectStream() {
+  const stream = new Stream.Readable({ objectMode: true })
+  stream._read = () => { }
+  return stream
+}
+
+async function streamFindRecursive(currentDir, options, currentLevel, _stream) {
+
+}
+
+async function find (currentDir, options = {}, currentLevel, stream) {
+  try {
+    if (!isOverTheLimit(options) && await exists(currentDir)) {
+      const maxLevel = getMaxLevel(options)
+      let deleteDirectory = false
+
+      options.totalToRemove = options.totalToRemove || 0
+      currentLevel = currentLevel === undefined ? 0 : currentLevel + 1
+
+      if (currentLevel < 1) {
+        now = new Date().getTime()
+        testRun = isTestRun(options)
+      } else {
+      // check directories before deleting files inside.
+      // this to maintain the original creation time,
+      // because linux modifies creation date of folders when files within have been deleted.
+        deleteDirectory = await doDeleteDirectory(currentDir, options, currentLevel)
+      }
+
+      if (maxLevel === -1 || currentLevel < maxLevel) {
+        const filesInDir = await fs.readdir(currentDir)
+
+        const promises = filesInDir.map(async function (file) {
+          const currentFile = path.join(currentDir, file)
+          let skip = false
+          let stat
+
+          try {
+            stat = await fs.stat(currentFile)
+          } catch (exc) {
+          // ignore
+            skip = true
+          }
+
+          if (skip) {
+          // ignore, do nothing
+          } else if (stat.isDirectory()) {
+          // the recursive call
+            await find(currentFile, options, currentLevel, stream)
+          } else {
+            if (await doDeleteFile(currentFile, options)) {
+              stream.push({ [currentFile]: true, type: 'file' })
+              options.totalToRemove++
+            }
+          }
+        })
+
+        await Promise.all(promises)
+      }
+
+      if (deleteDirectory) {
+        stream.push({ [currentDir]: true, type: 'directory' })
+      }
+    }
+  } catch (e) {
+    stream.emit('error', e)
+  }
+}
+
+async function streamFind (currentDir, options, currentLevel) {
+  const stream = createObjectStream()
+  let hasReadingBegun = false
+  stream.on('newListener', (l) => {
+    if (!hasReadingBegun) {
+      hasReadingBegun = true
+      find(currentDir, options, currentLevel, stream)
+        .then(d => {
+          console.log('pushing null')
+          stream.push(null)
+        })
+        .catch(e => {
+          console.error('error', e)
+          stream.emit('error', e)
+        })
+    }
+  })
+  return stream
+}
+
+async function deleteFile(currentFile, options) {
+  let unlinked
+
+  if (!testRun) {
+    try {
+      await fs.unlink(currentFile)
+      unlinked = true
+    } catch (exc) {
+      // ignore
+    }
+  } else {
+    unlinked = true
+  }
+  return unlinked
+}
+
+const streamDelete = (options) =>
+  new Stream.Transform({
+    objectMode: true,
+    transform: function transformer(record, encoding, callback) {
+      this.count = this.count || 0
+      if (!hasLimit(options) || this.count < getLimit(options)) {
+        callback(undefined, record)
+      } else {
+        // End transformation
+        callback()
+      }
+      this.count++
+    }
+  })
+
 /**
  * findRemoveSync(currentDir, options) takes any start directory and searches files from there for removal.
  * the selection of files for removal depends on the given options. when no options are given, or only the maxLevel
@@ -169,98 +289,76 @@ function isTestRun(options) {
  * @api public
  */
 const findRemove = async function (currentDir, options, currentLevel) {
-  let removed = {}
-  if (!isOverTheLimit(options) && await exists(currentDir)) {
-    const maxLevel = getMaxLevel(options)
-    let deleteDirectory = false
+  const findStream = await streamFind(currentDir, options, currentLevel)
+  return new Promise((resolve, reject) => {
+    const deleteStream = streamDelete(options)
+    const outputStream = new Stream.PassThrough({ objectMode: true })
 
-    if (hasLimit(options)) {
-      options.totalRemoved = hasTotalRemoved(options) ? getTotalRemoved(options) : 0
-    }
+    // findStream.on('error', e => {
+    //   console.error(e)
+    //   deleteStream.emit('error', e)
+    // })
 
-    if (currentLevel === undefined) {
-      currentLevel = 0
-    } else {
-      currentLevel++
-    }
+    // findStream.on('end', () => {
+    //   console.log('findStream Ended')
+    // })
+    // findStream.on('close', () => {
+    //   console.log('findStream closed')
+    //   deleteStream.push(null)
+    // })
 
-    if (currentLevel < 1) {
-      now = new Date().getTime()
-      testRun = isTestRun(options)
-    } else {
-      // check directories before deleting files inside.
-      // this to maintain the original creation time,
-      // because linux modifies creation date of folders when files within have been deleted.
-      deleteDirectory = await doDeleteDirectory(currentDir, options, currentLevel)
-    }
+    findStream.on('finish', () => {
+      console.log('findStream finished')
+    })
+    deleteStream.on('finish', () => {
+      console.log('deleteStream finished')
+    })
+    outputStream.on('finish', () => {
+      console.log('outputStream finished')
+    })
+    findStream.on('end', () => {
+      console.log('findStream ended')
+    })
+    deleteStream.on('end', () => {
+      console.log('deleteStream ended')
+    })
+    outputStream.on('end', () => {
+      console.log('outputStream ended')
+    })
+    findStream.on('close', () => {
+      console.log('findStream close')
+    })
+    deleteStream.on('close', () => {
+      console.log('deleteStream close')
+    })
+    outputStream.on('close', () => {
+      console.log('outputStream close')
+    })
 
-    if (maxLevel === -1 || currentLevel < maxLevel) {
-      const filesInDir = await fs.readdir(currentDir)
-
-      const promises = filesInDir.map(async function (file) {
-        const currentFile = path.join(currentDir, file)
-        let skip = false
-        let stat
-
-        try {
-          stat = await fs.stat(currentFile)
-        } catch (exc) {
-          // ignore
-          skip = true
-        }
-
-        if (skip) {
-          // ignore, do nothing
-        } else if (stat.isDirectory()) {
-          // the recursive call
-          const result = await findRemove(currentFile, options, currentLevel)
-
-          // merge results
-          removed = merge(removed, result)
-          if (hasTotalRemoved(options)) {
-            options.totalRemoved += Object.keys(result).length
-          }
-        } else {
-          if (await doDeleteFile(currentFile, options)) {
-            let unlinked
-
-            if (!testRun) {
-              try {
-                await fs.unlink(currentFile)
-                unlinked = true
-              } catch (exc) {
-                // ignore
-              }
-            } else {
-              unlinked = true
-            }
-
-            if (unlinked) {
-              removed[currentFile] = true
-              if (hasTotalRemoved(options)) {
-                options.totalRemoved++
-              }
-            }
-          }
-        }
-      })
-
-      await Promise.all(promises)
-    }
-
-    if (deleteDirectory) {
-      if (!testRun) {
-        rimraf.sync(currentDir)
-      }
-
-      if (!hasTotalRemoved(options)) {
-        // for limit of files - we do not want to count the directories
-        removed[currentDir] = true
+    const result = []
+    let ended = false
+    const onEnd = () => {
+      if (!ended) {
+        console.log(result)
+        resolve(result)
+        ended = true
       }
     }
-  }
+    // outputStream.on('end', onEnd)
+    outputStream.on('finish', onEnd)
+    // outputStream.on('close', onEnd)
 
-  return removed
+    outputStream.on('data', (d) => {
+      result.push(d)
+    })
+
+    Stream.pipeline(
+      findStream,
+      deleteStream,
+      outputStream,
+      err => reject(err)
+    )
+  })
 }
 
 module.exports = findRemove
