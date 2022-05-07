@@ -140,13 +140,13 @@ module.exports = testCase({
       t.done()
     },
 
-    'removing non-existing directory': (function (t) {
+    'removing non-existing directory': function (t) {
       const dir = generateRandomFilename()
       findRemove(dir).then((result) => {
         t.strictEqual(Object.keys(result).length, 0, 'returned empty')
         t.done()
       }).catch(console.error)
-    }(console.error))
+    }
 
   }),
 
@@ -1051,11 +1051,13 @@ module.exports = testCase({
 
     // from https://github.com/binarykitchen/find-remove/issues/7
     'findRemove(issues/7b)': function (t) {
-      findRemove(rootDirectory, { extensions: '.dontexist' }).then((result) => {
-        t.deepEqual(result, {}, 'is an empty json')
+      findRemove(rootDirectory, { extensions: '.dontexist' })
+        .then((result) => {
+          t.deepEqual(result, {}, 'is an empty json')
 
-        t.done()
-      }).catch(console.error)
+          t.done()
+        })
+        .catch(console.error)
     }
   }),
 

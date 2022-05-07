@@ -205,7 +205,7 @@ async function find (currentDir, options = {}, currentLevel, stream) {
             await find(currentFile, options, currentLevel, stream)
           } else {
             if (await doDeleteFile(currentFile, options)) {
-              stream.push({ [currentFile]: true, type: 'file' })
+              stream.push({ path: currentFile, type: 'file' })
               options.totalToRemove++
             }
           }
@@ -215,7 +215,7 @@ async function find (currentDir, options = {}, currentLevel, stream) {
       }
 
       if (deleteDirectory) {
-        stream.push({ [currentDir]: true, type: 'directory' })
+        stream.push({ path: currentDir, type: 'directory' })
       }
     }
   } catch (e) {
@@ -231,7 +231,6 @@ async function streamFind (currentDir, options, currentLevel) {
       hasReadingBegun = true
       find(currentDir, options, currentLevel, stream)
         .then(d => {
-          console.log('pushing null')
           stream.push(null)
         })
         .catch(e => {
@@ -243,20 +242,22 @@ async function streamFind (currentDir, options, currentLevel) {
   return stream
 }
 
-async function deleteFile(currentFile, options) {
-  let unlinked
-
+async function deleteFile(file) {
   if (!testRun) {
     try {
-      await fs.unlink(currentFile)
-      unlinked = true
+      await fs.unlink(file.path)
+      file.deleted = true
     } catch (exc) {
-      // ignore
+      console.debug(exc)
     }
-  } else {
-    unlinked = true
   }
-  return unlinked
+}
+
+async function deleteFolder(file) {
+  if (!testRun) {
+    rimraf.sync(file.path)
+    file.deleted = true
+  }
 }
 
 const streamDelete = (options) =>
@@ -288,7 +289,7 @@ const streamDelete = (options) =>
  * @return {Object} json object of files and/or directories that were found and successfully removed.
  * @api public
  */
-const findRemove = async function (currentDir, options, currentLevel) {
+const findRemove = async function (currentDir, options = {}, currentLevel) {
   const findStream = await streamFind(currentDir, options, currentLevel)
   return new Promise((resolve, reject) => {
     const deleteStream = streamDelete(options)
@@ -307,40 +308,42 @@ const findRemove = async function (currentDir, options, currentLevel) {
     //   deleteStream.push(null)
     // })
 
-    findStream.on('finish', () => {
-      console.log('findStream finished')
-    })
-    deleteStream.on('finish', () => {
-      console.log('deleteStream finished')
-    })
-    outputStream.on('finish', () => {
-      console.log('outputStream finished')
-    })
-    findStream.on('end', () => {
-      console.log('findStream ended')
-    })
-    deleteStream.on('end', () => {
-      console.log('deleteStream ended')
-    })
-    outputStream.on('end', () => {
-      console.log('outputStream ended')
-    })
-    findStream.on('close', () => {
-      console.log('findStream close')
-    })
-    deleteStream.on('close', () => {
-      console.log('deleteStream close')
-    })
-    outputStream.on('close', () => {
-      console.log('outputStream close')
-    })
+    // findStream.on('finish', () => {
+    //   console.log('findStream finished')
+    // })
+    // deleteStream.on('finish', () => {
+    //   console.log('deleteStream finished')
+    // })
+    // outputStream.on('finish', () => {
+    //   console.log('outputStream finished')
+    // })
+    // findStream.on('end', () => {
+    //   console.log('findStream ended')
+    // })
+    // deleteStream.on('end', () => {
+    //   console.log('deleteStream ended')
+    // })
+    // outputStream.on('end', () => {
+    //   console.log('outputStream ended')
+    // })
+    // findStream.on('close', () => {
+    //   console.log('findStream close')
+    // })
+    // deleteStream.on('close', () => {
+    //   console.log('deleteStream close')
+    // })
+    // outputStream.on('close', () => {
+    //   console.log('outputStream close')
+    // })
 
     const result = []
     let ended = false
     const onEnd = () => {
       if (!ended) {
-        console.log(result)
-        resolve(result)
+        resolve(result.reduce((map, file) => {
+          map[file.path] = true
+          return map
+        }, {}))
         ended = true
       }
     }
@@ -348,8 +351,23 @@ const findRemove = async function (currentDir, options, currentLevel) {
     outputStream.on('finish', onEnd)
     // outputStream.on('close', onEnd)
 
-    outputStream.on('data', (d) => {
-      result.push(d)
+    outputStream.on('data', file => {
+      findStream.pause()
+      if (file.type === 'file') {
+        deleteFile(file)
+          .then(() => {
+            result.push(file)
+            findStream.resume()
+          })
+          .catch(e => reject)
+      } else {
+        deleteFolder(file)
+          .then(() => {
+            result.push(file)
+            findStream.resume()
+          })
+          .catch(e => reject)
+      }
     })
 
     Stream.pipeline(
