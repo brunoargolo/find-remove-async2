@@ -260,13 +260,28 @@ async function deleteFolder(file) {
   }
 }
 
-const streamDelete = (options) =>
+const streamDelete = (findStream, options) =>
   new Stream.Transform({
     objectMode: true,
     transform: function transformer(record, encoding, callback) {
       this.count = this.count || 0
       if (!hasLimit(options) || this.count < getLimit(options)) {
-        callback(undefined, record)
+        findStream.pause()
+        if (record.type === 'file') {
+          deleteFile(record)
+            .then(() => {
+              callback(undefined, record)
+              findStream.resume()
+            })
+            .catch(callback)
+        } else {
+          deleteFolder(record)
+            .then(() => {
+              callback(undefined, record)
+              findStream.resume()
+            })
+            .catch(callback)
+        }
       } else {
         // End transformation
         callback()
@@ -292,7 +307,7 @@ const streamDelete = (options) =>
 const findRemove = async function (currentDir, options = {}, currentLevel) {
   const findStream = await streamFind(currentDir, options, currentLevel)
   return new Promise((resolve, reject) => {
-    const deleteStream = streamDelete(options)
+    const deleteStream = streamDelete(findStream, options)
     const outputStream = new Stream.PassThrough({ objectMode: true })
 
     // findStream.on('error', e => {
@@ -351,23 +366,8 @@ const findRemove = async function (currentDir, options = {}, currentLevel) {
     outputStream.on('finish', onEnd)
     // outputStream.on('close', onEnd)
 
-    outputStream.on('data', file => {
-      findStream.pause()
-      if (file.type === 'file') {
-        deleteFile(file)
-          .then(() => {
-            result.push(file)
-            findStream.resume()
-          })
-          .catch(e => reject)
-      } else {
-        deleteFolder(file)
-          .then(() => {
-            result.push(file)
-            findStream.resume()
-          })
-          .catch(e => reject)
-      }
+    outputStream.on('data', record => {
+      result.push(record)
     })
 
     Stream.pipeline(
