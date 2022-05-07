@@ -310,72 +310,37 @@ const findRemove = async function (currentDir, options = {}, currentLevel) {
     const deleteStream = streamDelete(findStream, options)
     const outputStream = new Stream.PassThrough({ objectMode: true })
 
-    // findStream.on('error', e => {
-    //   console.error(e)
-    //   deleteStream.emit('error', e)
-    // })
-
-    // findStream.on('end', () => {
-    //   console.log('findStream Ended')
-    // })
-    // findStream.on('close', () => {
-    //   console.log('findStream closed')
-    //   deleteStream.push(null)
-    // })
-
-    // findStream.on('finish', () => {
-    //   console.log('findStream finished')
-    // })
-    // deleteStream.on('finish', () => {
-    //   console.log('deleteStream finished')
-    // })
-    // outputStream.on('finish', () => {
-    //   console.log('outputStream finished')
-    // })
-    // findStream.on('end', () => {
-    //   console.log('findStream ended')
-    // })
-    // deleteStream.on('end', () => {
-    //   console.log('deleteStream ended')
-    // })
-    // outputStream.on('end', () => {
-    //   console.log('outputStream ended')
-    // })
-    // findStream.on('close', () => {
-    //   console.log('findStream close')
-    // })
-    // deleteStream.on('close', () => {
-    //   console.log('deleteStream close')
-    // })
-    // outputStream.on('close', () => {
-    //   console.log('outputStream close')
-    // })
-
-    const result = []
-    let ended = false
-    const onEnd = () => {
-      if (!ended) {
-        resolve(result.reduce((map, file) => {
-          map[file.path] = true
-          return map
-        }, {}))
-        ended = true
+    if (!options.returnStream) {
+      const result = []
+      let ended = false
+      const onEnd = () => {
+        if (!ended) {
+          resolve(result.reduce((map, file) => {
+            map[file.path] = true
+            return map
+          }, {}))
+          ended = true
+        }
       }
+      // outputStream.on('end', onEnd)
+      outputStream.on('finish', onEnd)
+      // outputStream.on('close', onEnd)
+
+      outputStream.on('data', record => {
+        result.push(record)
+      })
     }
-    // outputStream.on('end', onEnd)
-    outputStream.on('finish', onEnd)
-    // outputStream.on('close', onEnd)
-
-    outputStream.on('data', record => {
-      result.push(record)
-    })
-
     Stream.pipeline(
       findStream,
       deleteStream,
       outputStream,
       err => reject(err)
     )
+    if (options.returnStream) {
+      // Return the output stream for user to manipulate
+      // More memory efficient if you have a large number of files as they wont accumulate on an array.
+      resolve(outputStream)
+    }
   })
 }
 

@@ -1166,5 +1166,32 @@ module.exports = testCase({
         t.done()
       }).catch(console.error)
     }
+  }),
+
+  'TC 8: stream tests with regex patterns': testCase({
+    setUp: function (cb) {
+      createFakeDirectoryTreeRegex(cb)
+    },
+    tearDown: function (cb) {
+      destroyFakeDirectoryTree(cb)
+    },
+
+    'findRemove(regex pattern files)': function (t) {
+      findRemove(rootDirectory, { files: 'thing', regex: true, returnStream: true }).then(stream => {
+        stream.on('finish', () => {
+          const exists1_2_1_2 = existsSync(randomFile1_2_1_2)
+          t.equal(exists1_2_1_2, true, 'did not remove randomFile1_2_1_2')
+
+          const exists1_2_1_4 = existsSync(fixFile1_2_1_4) // something.png
+          t.equal(exists1_2_1_4, false, 'removed fixFile1_2_1_4 fine')
+
+          const exists1_2_1_5 = existsSync(fixFile1_2_1_5) // something.jpg
+          t.equal(exists1_2_1_5, false, 'removed fixFile1_2_1_5 fine')
+
+          t.done()
+        })
+      }).catch(console.error)
+    }
+
   })
 })
